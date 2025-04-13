@@ -1,6 +1,6 @@
 
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, HTMLMotionProps } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface GlowingCardProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -37,7 +37,7 @@ const GlowingCard: React.FC<GlowingCardProps> = ({
         hoverEffect && gradientClasses[gradient],
         className
       )}
-      {...props}
+      {...props as HTMLMotionProps<"div">}
     >
       {children}
     </motion.div>

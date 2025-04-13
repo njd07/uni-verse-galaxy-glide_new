@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -28,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, BarChart3, Piggy } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, DollarSign, Wallet, BarChart3, PiggyBank } from "lucide-react";
 
 const SpendStar = () => {
   const { wallet, updateWallet, transactions, addTransaction } = useUniverse();
@@ -46,7 +45,6 @@ const SpendStar = () => {
     amount: "",
   });
   
-  // Process data for pie chart
   const categoryTotals = transactions
     .filter(t => t.type === "expense")
     .reduce((acc, transaction) => {
@@ -291,7 +289,7 @@ const SpendStar = () => {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center">
-                    <Piggy className="w-6 h-6 text-universe-neonPurple mr-2" />
+                    <PiggyBank className="w-6 h-6 text-universe-neonPurple mr-2" />
                     <h3 className="font-semibold">Savings Goal</h3>
                   </div>
                   

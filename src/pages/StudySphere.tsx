@@ -2,7 +2,9 @@
 import React, { useState } from "react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
-import { Calendar, Dialog, Popover } from "@/components/ui/";
+import { Calendar } from "@/components/ui/calendar";
+import { Dialog } from "@/components/ui/dialog";
+import { Popover } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

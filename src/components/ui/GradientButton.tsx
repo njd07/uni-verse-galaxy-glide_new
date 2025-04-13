@@ -1,6 +1,6 @@
 
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, HTMLMotionProps } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface GradientButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -45,7 +45,7 @@ const GradientButton: React.FC<GradientButtonProps> = ({
         pulseEffect && "animate-pulse",
         className
       )}
-      {...props}
+      {...props as HTMLMotionProps<"button">}
     >
       {children}
     </motion.button>
