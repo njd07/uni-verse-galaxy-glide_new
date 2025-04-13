@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useUniverse } from "@/contexts/UniverseContext";
+import { useToast } from "@/components/ui/use-toast";
 import GradientText from "@/components/ui/GradientText";
 import GlowingCard from "@/components/ui/GlowingCard";
 import GradientButton from "@/components/ui/GradientButton";
@@ -48,6 +49,7 @@ const StarConnect = () => {
     currentUser
   } = useUniverse();
   
+  const { toast } = useToast();
   const [newPost, setNewPost] = useState({
     title: "",
     category: "Art",
@@ -57,6 +59,14 @@ const StarConnect = () => {
   
   const [newComment, setNewComment] = useState("");
   const [commentingOn, setCommentingOn] = useState<string | null>(null);
+  
+  const [newEvent, setNewEvent] = useState({
+    title: "",
+    date: new Date(),
+    club: "",
+    location: "",
+    description: ""
+  });
   
   const [events, setEvents] = useState([
     {
@@ -89,6 +99,15 @@ const StarConnect = () => {
   ]);
   
   const handleAddPost = () => {
+    if (!newPost.title || !newPost.content) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     addCommunityPost({
       userId: currentUser.id,
       title: newPost.title,
@@ -97,11 +116,52 @@ const StarConnect = () => {
       image: newPost.image || "https://images.unsplash.com/photo-1579548122080-c35fd6820ecb?q=80&w=2670&auto=format&fit=crop"
     });
     
+    toast({
+      title: "Post created!",
+      description: "Your post has been published successfully",
+    });
+    
     setNewPost({
       title: "",
       category: "Art",
       content: "",
       image: ""
+    });
+  };
+  
+  const handleAddEvent = () => {
+    if (!newEvent.title || !newEvent.club || !newEvent.location) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const event = {
+      id: `event${events.length + 1}`,
+      title: newEvent.title,
+      date: newEvent.date,
+      club: newEvent.club,
+      location: newEvent.location,
+      description: newEvent.description,
+      attendees: [currentUser.id]
+    };
+    
+    setEvents([...events, event]);
+    
+    toast({
+      title: "Event created!",
+      description: "Your event has been added successfully",
+    });
+    
+    setNewEvent({
+      title: "",
+      date: new Date(),
+      club: "",
+      location: "",
+      description: ""
     });
   };
   
@@ -141,6 +201,15 @@ const StarConnect = () => {
       }
       return event;
     }));
+    
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
+    
+    const isAttending = event.attendees.includes(currentUser.id);
+    toast({
+      title: isAttending ? "RSVP removed" : "RSVP confirmed",
+      description: isAttending ? `You're no longer attending ${event.title}` : `You're now attending ${event.title}`,
+    });
   };
   
   return (
@@ -191,6 +260,8 @@ const StarConnect = () => {
                     <Input
                       id="event-title"
                       placeholder="Enter event title"
+                      value={newEvent.title}
+                      onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
                       className="bg-universe-dark border-universe-card"
                     />
                   </div>
@@ -202,6 +273,11 @@ const StarConnect = () => {
                         id="event-date"
                         type="date"
                         className="bg-universe-dark border-universe-card"
+                        value={format(newEvent.date, "yyyy-MM-dd")}
+                        onChange={(e) => {
+                          const newDate = e.target.value ? new Date(e.target.value) : new Date();
+                          setNewEvent({ ...newEvent, date: newDate });
+                        }}
                       />
                     </div>
                     
@@ -211,6 +287,12 @@ const StarConnect = () => {
                         id="event-time"
                         type="time"
                         className="bg-universe-dark border-universe-card"
+                        onChange={(e) => {
+                          const [hours, minutes] = e.target.value.split(':').map(Number);
+                          const newDate = new Date(newEvent.date);
+                          newDate.setHours(hours, minutes);
+                          setNewEvent({ ...newEvent, date: newDate });
+                        }}
                       />
                     </div>
                   </div>
@@ -220,6 +302,8 @@ const StarConnect = () => {
                     <Input
                       id="event-club"
                       placeholder="Enter club or group name"
+                      value={newEvent.club}
+                      onChange={(e) => setNewEvent({ ...newEvent, club: e.target.value })}
                       className="bg-universe-dark border-universe-card"
                     />
                   </div>
@@ -229,6 +313,8 @@ const StarConnect = () => {
                     <Input
                       id="event-location"
                       placeholder="Enter event location"
+                      value={newEvent.location}
+                      onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
                       className="bg-universe-dark border-universe-card"
                     />
                   </div>
@@ -238,13 +324,19 @@ const StarConnect = () => {
                     <Textarea
                       id="event-description"
                       placeholder="Enter event details"
+                      value={newEvent.description}
+                      onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
                       className="bg-universe-dark border-universe-card"
                     />
                   </div>
                 </div>
                 
                 <DialogFooter>
-                  <GradientButton gradient="purple-pink">
+                  <GradientButton 
+                    gradient="purple-pink" 
+                    onClick={handleAddEvent}
+                    disabled={!newEvent.title || !newEvent.club || !newEvent.location}
+                  >
                     Create Event
                   </GradientButton>
                 </DialogFooter>

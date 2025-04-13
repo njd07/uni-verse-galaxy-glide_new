@@ -3,8 +3,8 @@ import React, { useState } from "react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { Calendar } from "@/components/ui/calendar";
-import { Dialog } from "@/components/ui/dialog";
-import { Popover } from "@/components/ui/popover";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -29,13 +28,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  PopoverContent
+} from "@/components/ui/popover";
 import { CalendarIcon, PlusCircle, BookOpen, MessageSquare } from "lucide-react";
 import { useUniverse } from "@/contexts/UniverseContext";
+import { useToast } from "@/components/ui/use-toast";
 import GradientText from "@/components/ui/GradientText";
 import GradientButton from "@/components/ui/GradientButton";
 import GlowingCard from "@/components/ui/GlowingCard";
 import SectionTitle from "@/components/ui/SectionTitle";
-import { PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 const StudySphere = () => {
@@ -52,6 +54,7 @@ const StudySphere = () => {
     setSelectedChat
   } = useUniverse();
   
+  const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [newEvent, setNewEvent] = useState({
     title: "",
@@ -94,12 +97,26 @@ const StudySphere = () => {
     : [];
   
   const handleAddEvent = () => {
+    if (!newEvent.title) {
+      toast({
+        title: "Event title required",
+        description: "Please enter a title for your event",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     addEvent({
       title: newEvent.title,
       date: newEvent.date,
       isExam: newEvent.isExam,
       description: newEvent.description,
       course: newEvent.course
+    });
+    
+    toast({
+      title: "Event added!",
+      description: `${newEvent.title} has been added to your calendar`,
     });
     
     setNewEvent({
@@ -112,12 +129,26 @@ const StudySphere = () => {
   };
   
   const handleAddClass = () => {
+    if (!newClass.course || !newClass.slot) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     addClassEvent({
       course: newClass.course,
       day: newClass.day,
       time: newClass.time,
       slot: newClass.slot,
       faculty: newClass.faculty
+    });
+    
+    toast({
+      title: "Class added!",
+      description: `${newClass.course} has been added to your schedule`,
     });
     
     setNewClass({
@@ -130,12 +161,26 @@ const StudySphere = () => {
   };
   
   const handleAddAssignment = () => {
+    if (!newAssignment.title) {
+      toast({
+        title: "Assignment title required",
+        description: "Please enter a title for your assignment",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     addAssignment({
       title: newAssignment.title,
       dueDate: newAssignment.dueDate,
       priority: newAssignment.priority as any,
       completed: false,
       course: newAssignment.course
+    });
+    
+    toast({
+      title: "Assignment added!",
+      description: `${newAssignment.title} has been added to your assignments`,
     });
     
     setNewAssignment({
@@ -296,6 +341,7 @@ const StudySphere = () => {
                       <div className="space-y-2">
                         <Label htmlFor="event-type">Event Type</Label>
                         <Select 
+                          defaultValue="event"
                           onValueChange={(value) => setNewEvent({ ...newEvent, isExam: value === "exam" })}
                         >
                           <SelectTrigger className="bg-universe-dark border-universe-card">
@@ -335,7 +381,7 @@ const StudySphere = () => {
                       <GradientButton
                         gradient="blue"
                         onClick={handleAddEvent}
-                        disabled={!newEvent.title || !newEvent.date}
+                        disabled={!newEvent.title}
                       >
                         Save Event
                       </GradientButton>

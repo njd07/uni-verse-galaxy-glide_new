@@ -1,7 +1,9 @@
 
 import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { format } from "date-fns";
 import { useUniverse } from "@/contexts/UniverseContext";
+import { useToast } from "@/components/ui/use-toast";
 import GradientText from "@/components/ui/GradientText";
 import GlowingCard from "@/components/ui/GlowingCard";
 import GradientButton from "@/components/ui/GradientButton";
@@ -19,7 +21,7 @@ import {
   Dialog,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, MessageSquare, UserPlus, Check, X, Mail } from "lucide-react";
+import { Search, MessageSquare, UserPlus, Check, X, Mail, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const Friends = () => {
@@ -27,12 +29,17 @@ const Friends = () => {
     friends, 
     addFriend, 
     updateFriendStatus, 
-    setSelectedChat, 
+    setSelectedChat,
+    chats,
+    addMessageToChat,
     currentUser 
   } = useUniverse();
   
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [friendEmail, setFriendEmail] = useState("");
+  const [chatMessage, setChatMessage] = useState("");
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
   
   const pendingFriends = friends.filter(friend => friend.status === "pending");
   const acceptedFriends = friends.filter(friend => friend.status === "accepted");
@@ -40,6 +47,10 @@ const Friends = () => {
   const filteredFriends = acceptedFriends.filter(friend => 
     friend.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  const activeChat = activeChatId 
+    ? chats.find(chat => chat.participants.includes(activeChatId))
+    : null;
   
   const handleSendFriendRequest = () => {
     if (!friendEmail.trim()) return;
@@ -50,19 +61,70 @@ const Friends = () => {
       profilePicture: undefined
     });
     
+    toast({
+      title: "Friend request sent",
+      description: `A request has been sent to ${friendEmail}`,
+    });
+    
     setFriendEmail("");
   };
   
   const handleAcceptFriendRequest = (id: string) => {
     updateFriendStatus(id, "accepted");
+    
+    toast({
+      title: "Friend request accepted",
+      description: "You are now friends!",
+    });
   };
   
   const handleDeclineFriendRequest = (id: string) => {
     updateFriendStatus(id, "declined");
+    
+    toast({
+      title: "Friend request declined",
+      description: "The friend request has been declined",
+    });
   };
   
   const handleMessage = (friendId: string) => {
-    setSelectedChat(friendId);
+    setActiveChatId(friendId);
+    
+    // Open chat dialog
+    const chatDialogElement = document.getElementById("chat-dialog-trigger");
+    if (chatDialogElement) {
+      (chatDialogElement as HTMLButtonElement).click();
+    }
+  };
+  
+  const handleSendMessage = () => {
+    if (!chatMessage.trim() || !activeChatId) return;
+    
+    // Find the chat or create a new one
+    let chatId = chats.find(chat => 
+      chat.participants.includes(currentUser.id) && 
+      chat.participants.includes(activeChatId)
+    )?.id;
+    
+    if (!chatId) {
+      // This would normally create a new chat in the database
+      chatId = "new-chat-" + Date.now();
+    }
+    
+    // Add the message
+    addMessageToChat({
+      chatId,
+      senderId: currentUser.id,
+      content: chatMessage,
+      timestamp: new Date()
+    });
+    
+    setChatMessage("");
+    
+    toast({
+      title: "Message sent",
+      description: "Your message has been sent successfully",
+    });
   };
   
   return (
@@ -269,6 +331,77 @@ const Friends = () => {
           )}
         </TabsContent>
       </Tabs>
+      
+      {/* Chat Dialog */}
+      <Dialog>
+        <DialogTrigger id="chat-dialog-trigger" className="hidden" />
+        <DialogContent className="bg-universe-card border-universe-neonBlue max-w-md w-full">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Avatar className="w-8 h-8 mr-2">
+                <AvatarFallback className="bg-universe-neonPurple text-white">
+                  {activeChatId ? friends.find(f => f.id === activeChatId)?.name.charAt(0) : "?"}
+                </AvatarFallback>
+              </Avatar>
+              <span>
+                {activeChatId ? 
+                  friends.find(f => f.id === activeChatId)?.name || "Chat" 
+                  : "New Chat"
+                }
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="h-[300px] overflow-y-auto border border-universe-card rounded-md mb-4 p-4 bg-universe-dark">
+            {activeChat?.messages?.length ? (
+              <div className="space-y-3">
+                {activeChat.messages.map((message, index) => (
+                  <div 
+                    key={index}
+                    className={cn(
+                      "max-w-[80%] rounded-lg p-3",
+                      message.senderId === currentUser.id
+                        ? "bg-universe-neonPurple bg-opacity-20 ml-auto"
+                        : "bg-universe-card"
+                    )}
+                  >
+                    <p className="text-sm">{message.content}</p>
+                    <p className="text-right text-xs text-gray-400">
+                      {format(message.timestamp, "h:mm a")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                <p>No messages yet. Start the conversation!</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex space-x-2">
+            <Input
+              placeholder="Type a message..."
+              value={chatMessage}
+              onChange={(e) => setChatMessage(e.target.value)}
+              className="flex-1 bg-universe-dark border-universe-card"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+            />
+            <Button
+              onClick={handleSendMessage}
+              disabled={!chatMessage.trim()}
+              className="bg-universe-neonBlue hover:bg-universe-neonBlue/80"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
