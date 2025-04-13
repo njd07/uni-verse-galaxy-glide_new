@@ -26,7 +26,20 @@ const GlowingCard: React.FC<GlowingCardProps> = ({
     "blue-pink": "hover:shadow-neon-pink before:bg-gradient-blue-pink",
   };
 
-  const { onAnimationStart, ...restProps } = props;
+  // Remove all event handler props that conflict with Framer Motion
+  const {
+    onAnimationStart, 
+    onDragStart,
+    onDragEnd,
+    onDrag,
+    onAnimationComplete,
+    onPan,
+    onPanStart,
+    onPanEnd,
+    onLayoutAnimationStart,
+    onLayoutAnimationComplete,
+    ...restProps
+  } = props;
 
   return (
     <motion.div

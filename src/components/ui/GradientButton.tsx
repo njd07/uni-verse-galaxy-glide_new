@@ -34,7 +34,20 @@ const GradientButton: React.FC<GradientButtonProps> = ({
     lg: "py-3 px-6 text-lg",
   };
 
-  const { onAnimationStart, ...restProps } = props;
+  // Remove all event handler props that conflict with Framer Motion
+  const {
+    onAnimationStart,
+    onDragStart,
+    onDragEnd,
+    onDrag,
+    onAnimationComplete,
+    onPan,
+    onPanStart,
+    onPanEnd,
+    onLayoutAnimationStart,
+    onLayoutAnimationComplete,
+    ...restProps
+  } = props;
 
   return (
     <motion.button
