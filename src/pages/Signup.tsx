@@ -12,28 +12,31 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import GradientText from "@/components/ui/GradientText";
 import { Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     setIsLoading(true);
     
     try {
       await signUp(email, password, username);
       navigate("/");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Signup error:", error);
+      setErrorMessage(error.message || "Failed to create your account. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -57,6 +60,11 @@ const Signup = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {errorMessage && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
@@ -67,6 +75,7 @@ const Signup = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
+                  disabled={isLoading}
                   className="bg-universe-dark border-universe-card"
                 />
               </div>
@@ -79,6 +88,7 @@ const Signup = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={isLoading}
                   className="bg-universe-dark border-universe-card"
                 />
               </div>
@@ -91,7 +101,9 @@ const Signup = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={isLoading}
                   className="bg-universe-dark border-universe-card"
+                  minLength={6}
                 />
               </div>
               <Button
