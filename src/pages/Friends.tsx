@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -23,6 +22,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, MessageSquare, UserPlus, Check, X, Mail, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 const Friends = () => {
   const { 
@@ -30,8 +30,6 @@ const Friends = () => {
     addFriend, 
     updateFriendStatus, 
     setSelectedChat,
-    chats,
-    addMessageToChat,
     currentUser 
   } = useUniverse();
   
@@ -40,6 +38,7 @@ const Friends = () => {
   const [friendEmail, setFriendEmail] = useState("");
   const [chatMessage, setChatMessage] = useState("");
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [chats, setChats] = useState<any[]>([]);
   
   const pendingFriends = friends.filter(friend => friend.status === "pending");
   const acceptedFriends = friends.filter(friend => friend.status === "accepted");
@@ -49,11 +48,22 @@ const Friends = () => {
   );
   
   const activeChat = activeChatId 
-    ? chats.find(chat => chat.participants.includes(activeChatId))
+    ? chats.find(chat => chat.participants && chat.participants.includes(activeChatId))
     : null;
   
-  const handleSendFriendRequest = () => {
+  const handleSendFriendRequest = async () => {
     if (!friendEmail.trim()) return;
+    
+    // Check if Supabase is configured before trying to use it
+    if (isSupabaseConfigured()) {
+      try {
+        // Here you would add the actual Supabase call to send a friend request
+        // For now, we'll just use the mock function
+        console.log("Sending friend request via Supabase to:", friendEmail);
+      } catch (error) {
+        console.error("Error sending friend request:", error);
+      }
+    }
     
     addFriend({
       name: `New Friend (${friendEmail})`,
@@ -97,11 +107,12 @@ const Friends = () => {
     }
   };
   
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!chatMessage.trim() || !activeChatId) return;
     
     // Find the chat or create a new one
     let chatId = chats.find(chat => 
+      chat.participants && 
       chat.participants.includes(currentUser.id) && 
       chat.participants.includes(activeChatId)
     )?.id;
@@ -109,18 +120,37 @@ const Friends = () => {
     if (!chatId) {
       // This would normally create a new chat in the database
       chatId = "new-chat-" + Date.now();
+      
+      // Add new chat to local state
+      setChats(prevChats => [...prevChats, {
+        id: chatId,
+        participants: [currentUser.id, activeChatId],
+        messages: []
+      }]);
     }
     
-    // Add the message
-    addMessageToChat({
-      chatId,
-      senderId: currentUser.id,
-      content: chatMessage,
-      timestamp: new Date()
-    });
+    // Add the message to local state
+    setChats(prevChats => 
+      prevChats.map(chat => {
+        if (chat.id === chatId) {
+          return {
+            ...chat,
+            messages: [...(chat.messages || []), {
+              chatId,
+              senderId: currentUser.id,
+              content: chatMessage,
+              timestamp: new Date()
+            }]
+          };
+        }
+        return chat;
+      })
+    );
     
+    // Clear the input
     setChatMessage("");
     
+    // Show success message
     toast({
       title: "Message sent",
       description: "Your message has been sent successfully",
