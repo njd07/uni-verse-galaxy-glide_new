@@ -1,15 +1,17 @@
 
 import React from "react";
-import { motion, MotionProps } from "framer-motion";
+import { motion, HTMLMotionProps } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-interface GradientButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, Partial<MotionProps> {
-  gradient?: "blue" | "purple" | "pink" | "blue-purple" | "purple-pink" | "blue-pink";
-  size?: "sm" | "md" | "lg";
-  pulseEffect?: boolean;
-  children: React.ReactNode;
-  className?: string;
-}
+// Omit the conflicting props from ButtonHTMLAttributes
+type GradientButtonProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, keyof HTMLMotionProps<"button">> & 
+  HTMLMotionProps<"button"> & {
+    gradient?: "blue" | "purple" | "pink" | "blue-purple" | "purple-pink" | "blue-pink";
+    size?: "sm" | "md" | "lg";
+    pulseEffect?: boolean;
+    children: React.ReactNode;
+    className?: string;
+  };
 
 const GradientButton: React.FC<GradientButtonProps> = ({
   gradient = "blue-purple",

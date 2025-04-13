@@ -1,14 +1,16 @@
 
 import React from "react";
-import { motion, MotionProps } from "framer-motion";
+import { motion, HTMLMotionProps } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-interface GlowingCardProps extends React.HTMLAttributes<HTMLDivElement>, Partial<MotionProps> {
-  gradient?: "blue" | "purple" | "pink" | "blue-purple" | "purple-pink" | "blue-pink";
-  hoverEffect?: boolean;
-  children: React.ReactNode;
-  className?: string;
-}
+// Omit the conflicting props from HTMLAttributes
+type GlowingCardProps = Omit<React.HTMLAttributes<HTMLDivElement>, keyof HTMLMotionProps<"div">> & 
+  HTMLMotionProps<"div"> & {
+    gradient?: "blue" | "purple" | "pink" | "blue-purple" | "purple-pink" | "blue-pink";
+    hoverEffect?: boolean;
+    children: React.ReactNode;
+    className?: string;
+  };
 
 const GlowingCard: React.FC<GlowingCardProps> = ({
   gradient = "blue",
