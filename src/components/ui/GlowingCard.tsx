@@ -26,6 +26,8 @@ const GlowingCard: React.FC<GlowingCardProps> = ({
     "blue-pink": "hover:shadow-neon-pink before:bg-gradient-blue-pink",
   };
 
+  const { onAnimationStart, ...restProps } = props;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -37,7 +39,7 @@ const GlowingCard: React.FC<GlowingCardProps> = ({
         hoverEffect && gradientClasses[gradient],
         className
       )}
-      {...props}
+      {...restProps}
     >
       {children}
     </motion.div>

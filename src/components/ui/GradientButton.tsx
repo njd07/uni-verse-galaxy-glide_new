@@ -34,11 +34,10 @@ const GradientButton: React.FC<GradientButtonProps> = ({
     lg: "py-3 px-6 text-lg",
   };
 
-  // Create a type-safe motion button component
-  const MotionButton = motion.button;
+  const { onAnimationStart, ...restProps } = props;
 
   return (
-    <MotionButton
+    <motion.button
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.97 }}
       className={cn(
@@ -48,10 +47,10 @@ const GradientButton: React.FC<GradientButtonProps> = ({
         pulseEffect && "animate-pulse",
         className
       )}
-      {...props}
+      {...restProps}
     >
       {children}
-    </MotionButton>
+    </motion.button>
   );
 };
 
