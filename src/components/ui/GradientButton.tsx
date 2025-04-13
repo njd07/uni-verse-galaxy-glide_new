@@ -1,9 +1,9 @@
 
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, MotionProps } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-interface GradientButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface GradientButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, Partial<MotionProps> {
   gradient?: "blue" | "purple" | "pink" | "blue-purple" | "purple-pink" | "blue-pink";
   size?: "sm" | "md" | "lg";
   pulseEffect?: boolean;
@@ -34,21 +34,6 @@ const GradientButton: React.FC<GradientButtonProps> = ({
     lg: "py-3 px-6 text-lg",
   };
 
-  // Remove all event handler props that conflict with Framer Motion
-  const {
-    onAnimationStart,
-    onDragStart,
-    onDragEnd,
-    onDrag,
-    onAnimationComplete,
-    onPan,
-    onPanStart,
-    onPanEnd,
-    onLayoutAnimationStart,
-    onLayoutAnimationComplete,
-    ...restProps
-  } = props;
-
   return (
     <motion.button
       whileHover={{ scale: 1.03 }}
@@ -60,7 +45,7 @@ const GradientButton: React.FC<GradientButtonProps> = ({
         pulseEffect && "animate-pulse",
         className
       )}
-      {...restProps}
+      {...props}
     >
       {children}
     </motion.button>

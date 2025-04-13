@@ -1,9 +1,9 @@
 
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, MotionProps } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-interface GlowingCardProps extends React.HTMLAttributes<HTMLDivElement> {
+interface GlowingCardProps extends React.HTMLAttributes<HTMLDivElement>, Partial<MotionProps> {
   gradient?: "blue" | "purple" | "pink" | "blue-purple" | "purple-pink" | "blue-pink";
   hoverEffect?: boolean;
   children: React.ReactNode;
@@ -26,21 +26,6 @@ const GlowingCard: React.FC<GlowingCardProps> = ({
     "blue-pink": "hover:shadow-neon-pink before:bg-gradient-blue-pink",
   };
 
-  // Remove all event handler props that conflict with Framer Motion
-  const {
-    onAnimationStart, 
-    onDragStart,
-    onDragEnd,
-    onDrag,
-    onAnimationComplete,
-    onPan,
-    onPanStart,
-    onPanEnd,
-    onLayoutAnimationStart,
-    onLayoutAnimationComplete,
-    ...restProps
-  } = props;
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -52,7 +37,7 @@ const GlowingCard: React.FC<GlowingCardProps> = ({
         hoverEffect && gradientClasses[gradient],
         className
       )}
-      {...restProps}
+      {...props}
     >
       {children}
     </motion.div>
