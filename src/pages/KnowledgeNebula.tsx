@@ -136,7 +136,7 @@ const KnowledgeNebula = () => {
                     </div>
                   </SelectTrigger>
                   <SelectContent className="bg-universe-card border-universe-card">
-                    <SelectItem value="">All Types</SelectItem>
+                    <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="PDF">PDF</SelectItem>
                     <SelectItem value="PYQ">PYQ</SelectItem>
                   </SelectContent>
@@ -155,7 +155,7 @@ const KnowledgeNebula = () => {
                     </div>
                   </SelectTrigger>
                   <SelectContent className="bg-universe-card border-universe-card">
-                    <SelectItem value="">All Courses</SelectItem>
+                    <SelectItem value="all">All Courses</SelectItem>
                     {uniqueCourses.map(course => (
                       <SelectItem key={course} value={course}>{course}</SelectItem>
                     ))}
