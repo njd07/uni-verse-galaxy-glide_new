@@ -1,6 +1,6 @@
 
 import React from "react";
-import { motion, HTMLMotionProps } from "framer-motion";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface GradientButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -34,8 +34,11 @@ const GradientButton: React.FC<GradientButtonProps> = ({
     lg: "py-3 px-6 text-lg",
   };
 
+  // Create a type-safe motion button component
+  const MotionButton = motion.button;
+
   return (
-    <motion.button
+    <MotionButton
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.97 }}
       className={cn(
@@ -45,10 +48,10 @@ const GradientButton: React.FC<GradientButtonProps> = ({
         pulseEffect && "animate-pulse",
         className
       )}
-      {...props as HTMLMotionProps<"button">}
+      {...props}
     >
       {children}
-    </motion.button>
+    </MotionButton>
   );
 };
 
