@@ -37,7 +37,7 @@ import {
   ShoppingCart 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/components/ui/toast";
+import { useToast } from "@/hooks/use-toast";
 
 const KnowledgeNebula = () => {
   const { resources, addResource, campusInfo } = useUniverse();
