@@ -380,9 +380,14 @@ const KnowledgeNebula = () => {
                 Campus Map
               </h3>
               
-              <div className="aspect-video bg-universe-dark rounded-lg flex items-center justify-center">
-                <p className="text-gray-400">Interactive campus map coming soon</p>
+              <div className="aspect-video bg-universe-dark rounded-lg overflow-hidden">
+                <img 
+                  src="/lovable-uploads/78fb3cdb-3861-4d5b-aea9-4fcdde495972.png" 
+                  alt="Campus Map" 
+                  className="w-full h-full object-contain"
+                />
               </div>
+              <p className="text-sm text-gray-400 mt-2">Campus map showing academic buildings, hostels, and facilities</p>
             </div>
           </GlowingCard>
         </TabsContent>
