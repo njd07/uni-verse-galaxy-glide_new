@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { supabase, testSupabaseConnection } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 
 type AuthContextType = {
@@ -11,6 +11,7 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username: string) => Promise<void>;
   signOut: () => Promise<void>;
+  testConnection: () => Promise<{ success: boolean; error?: any }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,26 +23,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   useEffect(() => {
-    // Get initial session
-    const getSession = async () => {
+    const initializeAuth = async () => {
       try {
+        // Test connection first
+        await testSupabaseConnection();
+        
+        // Get initial session
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error("Session retrieval error:", error.message);
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
         }
-        setSession(session);
-        setUser(session?.user ?? null);
       } catch (error: any) {
-        console.error("Error getting session:", error.message);
+        console.error("Error initializing auth:", error.message);
       } finally {
         setLoading(false);
       }
     };
 
-    getSession();
+    initializeAuth();
 
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log("Auth state changed:", event);
       setSession(newSession);
       setUser(newSession?.user ?? null);
       setLoading(false);
@@ -52,22 +58,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const testConnection = async () => {
+    return await testSupabaseConnection();
+  };
+
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     try {
+      console.log("Attempting to sign in with:", email);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      
+      if (error) {
+        console.error("Sign in error:", error);
+        throw error;
+      }
+      
       toast({
         title: "Welcome back!",
         description: "You've successfully signed in.",
         duration: 3000,
       });
     } catch (error: any) {
-      console.error("Sign in error:", error);
-      let errorMsg = "Failed to sign in. Please try again.";
+      console.error("Sign in error details:", error);
+      let errorMsg = "Failed to sign in. Please check your internet connection and try again.";
       if (error.message) {
         errorMsg = error.message;
+      } else if (error.error_description) {
+        errorMsg = error.error_description;
       }
+      
       toast({
         title: "Sign in failed",
         description: errorMsg,
@@ -83,18 +102,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, username: string) => {
     setLoading(true);
     try {
+      console.log("Attempting to sign up with:", email, "and username:", username);
+      
+      // Test connection before sign up
+      const connectionTest = await testSupabaseConnection();
+      if (!connectionTest.success) {
+        throw new Error("Cannot connect to Supabase. Please check your internet connection.");
+      }
+      
       // Create the user
       const { error: signUpError, data } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
-          data: {
-            username,
-          }
+          data: { username },
+          emailRedirectTo: window.location.origin
         }
       });
       
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        console.error("Sign up error:", signUpError);
+        throw signUpError;
+      }
       
       toast({
         title: "Account created!",
@@ -102,11 +131,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         duration: 5000,
       });
     } catch (error: any) {
-      console.error("Sign up error:", error);
-      let errorMsg = "Failed to create account. Please try again.";
+      console.error("Sign up error details:", error);
+      let errorMsg = "Failed to create account. Please check your internet connection and try again.";
+      
       if (error.message) {
         errorMsg = error.message;
+      } else if (error.error_description) {
+        errorMsg = error.error_description;
       }
+      
       toast({
         title: "Sign up failed",
         description: errorMsg,
@@ -143,7 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, testConnection }}>
       {children}
     </AuthContext.Provider>
   );
