@@ -207,16 +207,57 @@ const UniverseContext = createContext<UniverseContextType | null>(null);
 
 // Create provider component
 export const UniverseProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // User state
-  const [currentUser, setCurrentUser] = useState<User>({
-    id: "user1",
-    name: "Alex Smith",
-    studentId: "ST12345",
-    profilePicture: "https://i.pravatar.cc/300",
-    assignmentsCompleted: 5,
-    eventsAttended: 3,
-    email: "alex.smith@university.edu"
+  // User state - Check for user profile in localStorage
+  const [currentUser, setCurrentUser] = useState<User>(() => {
+    const storedUser = localStorage.getItem('userProfile');
+    if (storedUser) {
+      try {
+        return JSON.parse(storedUser);
+      } catch (e) {
+        console.error("Error parsing stored user:", e);
+      }
+    }
+    
+    // Default user if none found
+    return {
+      id: "user1",
+      name: "Alex Smith",
+      studentId: "ST12345",
+      profilePicture: "https://i.pravatar.cc/300",
+      assignmentsCompleted: 5,
+      eventsAttended: 3,
+      email: "alex.smith@university.edu"
+    };
   });
+  
+  // Check localStorage for user profile updates
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const storedUser = localStorage.getItem('userProfile');
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setCurrentUser(prev => ({
+            ...prev,
+            ...parsedUser
+          }));
+          console.log("Updated user from localStorage:", parsedUser);
+        } catch (e) {
+          console.error("Error parsing stored user:", e);
+        }
+      }
+    };
+
+    // Listen for changes to localStorage
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also check on mount
+    handleStorageChange();
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
   
   // StudySphere state
   const [events, setEvents] = useState<Event[]>([
@@ -635,7 +676,12 @@ export const UniverseProvider: React.FC<{ children: ReactNode }> = ({ children }
   
   // Methods
   const updateUser = (user: Partial<User>) => {
-    setCurrentUser(prev => ({ ...prev, ...user }));
+    setCurrentUser(prev => {
+      const updatedUser = { ...prev, ...user };
+      // Also update localStorage
+      localStorage.setItem('userProfile', JSON.stringify(updatedUser));
+      return updatedUser;
+    });
   };
   
   // StudySphere methods

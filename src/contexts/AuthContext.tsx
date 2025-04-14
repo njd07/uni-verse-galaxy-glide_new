@@ -2,8 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { useToast } from '@/components/ui/use-toast';
-import { useUniverse } from '@/contexts/UniverseContext';
+import { useToast } from '@/hooks/use-toast';
 
 type AuthContextType = {
   user: User | null;
@@ -22,7 +21,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { updateUser } = useUniverse();
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -39,7 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(session);
           setUser(session?.user ?? null);
           
-          // Update Universe context with user info
+          // Update user profile in localStorage to avoid circular dependency
           if (session?.user) {
             updateUserInformation(session.user);
           }
@@ -51,19 +49,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    // Update Universe context with user info
+    // Update user information without using UniverseContext
     const updateUserInformation = (user: User) => {
       const username = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
       const id = user.id;
       const email = user.email || '';
       
-      updateUser({
+      // Store user info in localStorage to be picked up by UniverseContext
+      localStorage.setItem('userProfile', JSON.stringify({
         id: id,
         name: username,
         studentId: `ST${id.substring(0, 5).toUpperCase()}`,
         email: email,
         profilePicture: user.user_metadata?.avatar_url || `https://i.pravatar.cc/300?u=${id}`
-      });
+      }));
     };
 
     // Set up auth state listener
@@ -72,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(newSession);
       setUser(newSession?.user ?? null);
       
-      // Update Universe context with user info when session changes
+      // Update user info when session changes
       if (newSession?.user) {
         updateUserInformation(newSession.user);
       }
@@ -86,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-  }, [updateUser]);
+  }, []);
 
   const testConnection = async () => {
     console.log("Testing Supabase connection...");
