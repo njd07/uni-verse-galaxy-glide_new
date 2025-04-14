@@ -1,292 +1,210 @@
-import React, { useState, useRef } from "react";
+
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useUniverse } from "@/contexts/UniverseContext";
 import GradientText from "@/components/ui/GradientText";
 import GlowingCard from "@/components/ui/GlowingCard";
 import GradientButton from "@/components/ui/GradientButton";
-import SectionTitle from "@/components/ui/SectionTitle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { TabsContent, TabsList, TabsTrigger, Tabs } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
   Dialog,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { 
-  Search, 
-  BookOpen, 
-  Filter, 
-  Download, 
-  Clock, 
-  Coffee, 
-  BookMarked, 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Search,
+  FileText,
+  Calendar,
+  Clock,
+  Download,
+  Coffee,
+  Store,
+  PenLine,
+  MoreVertical,
+  Filter,
+  BookOpen,
+  FileQuestion,
+  Grid3X3,
+  Plus,
   ShoppingCart 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import ResourceUploader from "@/components/ResourceUploader";
 
 const KnowledgeNebula = () => {
   const { resources, addResource, campusInfo } = useUniverse();
   const { toast } = useToast();
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
   const [searchTerm, setSearchTerm] = useState("");
-  const [resourceTypeFilter, setResourceTypeFilter] = useState<string | null>(null);
-  const [courseFilter, setCourseFilter] = useState<string | null>(null);
-  const [campusInfoTab, setCampusInfoTab] = useState("menu");
+  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<"PDF" | "PYQ" | null>(null);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   
-  const [newResource, setNewResource] = useState({
-    title: "",
-    course: "",
-    type: "PDF",
-    url: "#",
-    file: null as File | null
+  // Get unique courses from resources
+  const courses = Array.from(new Set(resources.map((resource) => resource.course)));
+  
+  // Filter resources based on search and filters
+  const filteredResources = resources.filter((resource) => {
+    const matchesSearch = resource.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          resource.course.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCourse = !selectedCourse || resource.course === selectedCourse;
+    const matchesType = !selectedType || resource.type === selectedType;
+    
+    return matchesSearch && matchesCourse && matchesType;
   });
   
-  const uniqueCourses = Array.from(new Set(resources.map(resource => resource.course)));
-  
-  const filteredResources = resources.filter(resource => {
-    const matchesSearchTerm = searchTerm === "" || 
-      resource.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      resource.course.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesType = resourceTypeFilter === null || resource.type === resourceTypeFilter;
-    
-    const matchesCourse = courseFilter === null || resource.course === courseFilter;
-    
-    return matchesSearchTerm && matchesType && matchesCourse;
-  });
-  
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    if (file) {
-      console.log("File selected:", file.name);
-      setNewResource({ ...newResource, file });
-      
-      if (file.name.toLowerCase().endsWith('.pdf')) {
-        setNewResource(prev => ({ ...prev, file, type: "PDF" }));
-      } else {
-        setNewResource(prev => ({ ...prev, file }));
-      }
-    }
-  };
-  
-  const handleAddResource = () => {
-    if (!newResource.title || !newResource.course) {
-      toast({
-        title: "Missing information",
-        description: "Please provide a title and course for the resource",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    const resourceUrl = newResource.file 
-      ? URL.createObjectURL(newResource.file) 
-      : "#";
-    
-    addResource({
-      title: newResource.title,
-      course: newResource.course,
-      uploadDate: new Date(),
-      type: newResource.type as "PDF" | "PYQ",
-      url: resourceUrl
-    });
-    
+  const handleDownload = (resource: typeof resources[0]) => {
+    // In a real app, this would download the file
+    // For now, just show a toast
     toast({
-      title: "Resource Added",
-      description: `${newResource.title} has been added successfully`,
+      title: "Download Started",
+      description: `${resource.title} is being downloaded.`,
     });
-    
-    setNewResource({
-      title: "",
-      course: "",
-      type: "PDF",
-      url: "#",
-      file: null
-    });
-    
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
   };
   
-  const resourceDialogContent = (
-    <DialogContent className="bg-universe-card border-universe-neonBlue">
-      <DialogHeader>
-        <DialogTitle>Upload Resource</DialogTitle>
-        <DialogDescription>
-          Share study materials with your classmates
-        </DialogDescription>
-      </DialogHeader>
-      
-      <div className="space-y-4 py-4">
-        <div className="space-y-2">
-          <Label htmlFor="resource-title">Title</Label>
-          <Input
-            id="resource-title"
-            placeholder="Enter resource title"
-            value={newResource.title}
-            onChange={(e) => setNewResource({ ...newResource, title: e.target.value })}
-            className="bg-universe-dark border-universe-card"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="resource-course">Course</Label>
-          <Input
-            id="resource-course"
-            placeholder="Enter course name"
-            value={newResource.course}
-            onChange={(e) => setNewResource({ ...newResource, course: e.target.value })}
-            className="bg-universe-dark border-universe-card"
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="resource-type">Resource Type</Label>
-          <Select 
-            value={newResource.type}
-            onValueChange={(value) => setNewResource({ ...newResource, type: value })}
-          >
-            <SelectTrigger className="bg-universe-dark border-universe-card">
-              <SelectValue placeholder="Select resource type" />
-            </SelectTrigger>
-            <SelectContent className="bg-universe-card border-universe-card">
-              <SelectItem value="PDF">PDF</SelectItem>
-              <SelectItem value="PYQ">PYQ</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div 
-          className="bg-universe-dark border border-dashed border-universe-card rounded-lg p-6 text-center cursor-pointer"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <input 
-            type="file" 
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden" 
-            accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
-          />
-          <BookOpen className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-          <p className="text-sm text-gray-400">
-            {newResource.file ? `Selected: ${newResource.file.name}` : 'Drop your file here or click to browse'}
-          </p>
-          <p className="text-xs text-gray-500 mt-2">
-            Supports PDF, DOC, PPT (Max 10MB)
-          </p>
-        </div>
-      </div>
-      
-      <DialogFooter>
-        <GradientButton
-          gradient="blue"
-          onClick={handleAddResource}
-          disabled={!newResource.title || !newResource.course}
-        >
-          Upload Resource
-        </GradientButton>
-      </DialogFooter>
-    </DialogContent>
-  );
+  const clearFilters = () => {
+    setSelectedCourse(null);
+    setSelectedType(null);
+  };
+  
+  const handleAddResource = (newResource: Omit<typeof resources[0], "id">) => {
+    addResource(newResource);
+    setIsUploadDialogOpen(false);
+  };
   
   return (
     <div className="space-y-8">
       <header className="mb-8">
-        <GradientText gradient="blue" element="h1" className="text-3xl md:text-4xl font-bold mb-2">
-          📚 Orbit: KnowledgeNebula
+        <GradientText gradient="blue-green" element="h1" className="text-3xl md:text-4xl font-bold mb-2">
+          Knowledge Nebula
         </GradientText>
-        <p className="text-gray-400">Access learning resources and campus information</p>
+        <p className="text-gray-400">Access study materials and campus information</p>
       </header>
       
       <Tabs defaultValue="resources" className="w-full">
         <TabsList className="mb-6 bg-universe-card">
           <TabsTrigger value="resources" className="data-[state=active]:bg-universe-neonBlue data-[state=active]:text-white">
-            Academic Resources
+            Study Resources
           </TabsTrigger>
-          <TabsTrigger value="campus-info" className="data-[state=active]:bg-universe-neonBlue data-[state=active]:text-white">
+          <TabsTrigger value="campus" className="data-[state=active]:bg-universe-neonBlue data-[state=active]:text-white">
             Campus Info
           </TabsTrigger>
         </TabsList>
         
         <TabsContent value="resources" className="space-y-6">
-          <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <Input
-                  placeholder="Search PDFs, PYQs..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-universe-dark border-universe-card focus:border-universe-neonBlue w-full"
-                />
-              </div>
+          <div className="flex flex-col md:flex-row gap-4 justify-between">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <Input
+                placeholder="Search resources..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-universe-dark border-universe-card focus:border-universe-neonBlue w-full"
+              />
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="relative">
-                <Select
-                  value={resourceTypeFilter || ""}
-                  onValueChange={value => setResourceTypeFilter(value === "" ? null : value)}
-                >
-                  <SelectTrigger className="bg-universe-dark border-universe-card w-[120px]">
-                    <div className="flex items-center">
-                      <Filter className="mr-2 h-4 w-4" />
-                      <SelectValue placeholder="Type" />
+            <div className="flex gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="border-universe-card">
+                    <Filter className="w-4 h-4 mr-2" />
+                    Filter
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-universe-card border-universe-neonBlue">
+                  <div className="p-2">
+                    <p className="text-xs text-gray-400 mb-1">Course</p>
+                    <div className="grid grid-cols-2 gap-1 mb-3">
+                      {courses.map((course) => (
+                        <Button
+                          key={course}
+                          variant="outline"
+                          size="sm"
+                          className={cn(
+                            "text-xs justify-start h-7",
+                            selectedCourse === course
+                              ? "bg-universe-neonBlue text-white border-universe-neonBlue"
+                              : "border-universe-card"
+                          )}
+                          onClick={() => setSelectedCourse(selectedCourse === course ? null : course)}
+                        >
+                          {course}
+                        </Button>
+                      ))}
                     </div>
-                  </SelectTrigger>
-                  <SelectContent className="bg-universe-card border-universe-card">
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="PDF">PDF</SelectItem>
-                    <SelectItem value="PYQ">PYQ</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="relative">
-                <Select
-                  value={courseFilter || ""}
-                  onValueChange={value => setCourseFilter(value === "" ? null : value)}
-                >
-                  <SelectTrigger className="bg-universe-dark border-universe-card w-[150px]">
-                    <div className="flex items-center">
-                      <BookMarked className="mr-2 h-4 w-4" />
-                      <SelectValue placeholder="Course" />
+                    
+                    <p className="text-xs text-gray-400 mb-1">Type</p>
+                    <div className="flex gap-1 mb-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "text-xs justify-start h-7",
+                          selectedType === "PDF"
+                            ? "bg-universe-neonBlue text-white border-universe-neonBlue"
+                            : "border-universe-card"
+                        )}
+                        onClick={() => setSelectedType(selectedType === "PDF" ? null : "PDF")}
+                      >
+                        <FileText className="w-3 h-3 mr-1" />
+                        PDF
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "text-xs justify-start h-7",
+                          selectedType === "PYQ"
+                            ? "bg-universe-neonBlue text-white border-universe-neonBlue"
+                            : "border-universe-card"
+                        )}
+                        onClick={() => setSelectedType(selectedType === "PYQ" ? null : "PYQ")}
+                      >
+                        <FileQuestion className="w-3 h-3 mr-1" />
+                        PYQ
+                      </Button>
                     </div>
-                  </SelectTrigger>
-                  <SelectContent className="bg-universe-card border-universe-card">
-                    <SelectItem value="all">All Courses</SelectItem>
-                    {uniqueCourses.map(course => (
-                      <SelectItem key={course} value={course}>{course}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={clearFilters}
+                    >
+                      Clear filters
+                    </Button>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
               
-              <Dialog>
+              <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
                 <DialogTrigger asChild>
                   <GradientButton gradient="blue" className="whitespace-nowrap">
-                    Upload Resource
+                    <Plus className="w-4 h-4 mr-2" /> 
+                    Add Resource
                   </GradientButton>
                 </DialogTrigger>
-                {resourceDialogContent}
+                <ResourceUploader 
+                  onUpload={handleAddResource}
+                  onCancel={() => setIsUploadDialogOpen(false)}
+                />
               </Dialog>
             </div>
           </div>
@@ -295,204 +213,178 @@ const KnowledgeNebula = () => {
             <div className="text-center py-12">
               <BookOpen className="mx-auto h-12 w-12 text-gray-500 mb-4" />
               <h3 className="text-xl font-semibold mb-2">No resources found</h3>
-              <p className="text-gray-400">
-                Try adjusting your search or filters, or upload a new resource
+              <p className="text-gray-400 mb-6">
+                {searchTerm || selectedCourse || selectedType
+                  ? "Try changing your search or filters"
+                  : "Upload study materials to get started"}
               </p>
+              {!searchTerm && !selectedCourse && !selectedType && (
+                <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+                  <DialogTrigger asChild>
+                    <GradientButton gradient="blue">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add First Resource
+                    </GradientButton>
+                  </DialogTrigger>
+                  <ResourceUploader 
+                    onUpload={handleAddResource}
+                    onCancel={() => setIsUploadDialogOpen(false)}
+                  />
+                </Dialog>
+              )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredResources.map((resource) => (
-                <motion.div
-                  key={resource.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <GlowingCard gradient="blue" className="hover:shadow-neon">
-                    <div className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-semibold">{resource.title}</h4>
-                          <p className="text-sm text-gray-400 mt-1">{resource.course}</p>
-                        </div>
-                        <span className={cn(
-                          "text-xs px-2 py-0.5 rounded-full",
-                          resource.type === "PDF" 
-                            ? "bg-blue-500 bg-opacity-30 text-blue-300" 
-                            : "bg-yellow-500 bg-opacity-30 text-yellow-300"
-                        )}>
-                          {resource.type}
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between items-center mt-4">
-                        <div className="flex items-center text-xs text-gray-400">
-                          <Clock className="w-3 h-3 mr-1" />
-                          <span>{format(resource.uploadDate, "MMM d, yyyy")}</span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="p-1 text-universe-neonBlue hover:text-white hover:bg-universe-neonBlue hover:bg-opacity-20"
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </GlowingCard>
-                </motion.div>
-              ))}
-            </div>
+            <GlowingCard gradient="blue" className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-universe-card hover:bg-transparent">
+                      <TableHead className="w-1/3">Title</TableHead>
+                      <TableHead>Course</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Upload Date</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredResources.map((resource) => (
+                      <TableRow key={resource.id} className="border-universe-card hover:bg-universe-dark">
+                        <TableCell className="font-medium">{resource.title}</TableCell>
+                        <TableCell>{resource.course}</TableCell>
+                        <TableCell>
+                          <span className={cn(
+                            "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                            resource.type === "PDF" 
+                              ? "bg-blue-500 bg-opacity-20 text-blue-400" 
+                              : "bg-amber-500 bg-opacity-20 text-amber-400"
+                          )}>
+                            {resource.type === "PDF" ? (
+                              <FileText className="w-3 h-3 mr-1" />
+                            ) : (
+                              <FileQuestion className="w-3 h-3 mr-1" />
+                            )}
+                            {resource.type}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center text-gray-400">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            <span>{format(new Date(resource.uploadDate), "MMM d, yyyy")}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDownload(resource)}
+                            className="text-gray-400 hover:text-white hover:bg-universe-card"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </GlowingCard>
           )}
         </TabsContent>
         
-        <TabsContent value="campus-info" className="space-y-6">
-          <div className="flex justify-between items-center mb-6">
-            <SectionTitle 
-              title="Campus Information" 
-              gradient="blue" 
-              description="Everything you need to know about campus facilities"
-            />
-          </div>
-          
-          <div className="bg-universe-dark rounded-lg p-1 mb-6 inline-flex">
-            <button
-              className={cn(
-                "px-4 py-2 rounded-md text-sm font-medium transition-colors",
-                campusInfoTab === "menu" 
-                  ? "bg-universe-card text-white" 
-                  : "text-gray-400 hover:text-white"
-              )}
-              onClick={() => setCampusInfoTab("menu")}
-            >
-              Menu
-            </button>
-            <button
-              className={cn(
-                "px-4 py-2 rounded-md text-sm font-medium transition-colors",
-                campusInfoTab === "shop-hours" 
-                  ? "bg-universe-card text-white" 
-                  : "text-gray-400 hover:text-white"
-              )}
-              onClick={() => setCampusInfoTab("shop-hours")}
-            >
-              Shop Hours
-            </button>
-            <button
-              className={cn(
-                "px-4 py-2 rounded-md text-sm font-medium transition-colors",
-                campusInfoTab === "stationery" 
-                  ? "bg-universe-card text-white" 
-                  : "text-gray-400 hover:text-white"
-              )}
-              onClick={() => setCampusInfoTab("stationery")}
-            >
-              Stationery Stock
-            </button>
-          </div>
-          
-          {campusInfoTab === "menu" && (
-            <div>
-              <div className="flex items-center mb-4">
-                <Coffee className="text-universe-neonBlue mr-2" />
-                <h3 className="text-lg font-semibold">Campus Cafeteria Menu</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {campusInfo.menu.map((item, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, delay: index * 0.05 }}
-                  >
-                    <GlowingCard gradient="blue" className="hover:shadow-neon">
-                      <div className="p-4 flex justify-between items-center">
-                        <span className="font-medium">{item.item}</span>
-                        <span className="text-universe-neonBlue font-semibold">₹{item.price}</span>
-                      </div>
-                    </GlowingCard>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {campusInfoTab === "shop-hours" && (
-            <div>
-              <div className="flex items-center mb-4">
-                <Clock className="text-universe-neonBlue mr-2" />
-                <h3 className="text-lg font-semibold">Campus Facilities Hours</h3>
-              </div>
-              
-              <GlowingCard gradient="blue">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-universe-card">
-                        <th className="px-4 py-3 text-left">Facility</th>
-                        <th className="px-4 py-3 text-left">Operating Hours</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {campusInfo.shopHours.map((shop, index) => (
-                        <tr key={index} className="border-b border-universe-card">
-                          <td className="px-4 py-3">{shop.name}</td>
-                          <td className="px-4 py-3 text-universe-neonBlue">{shop.hours}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+        <TabsContent value="campus" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <GlowingCard gradient="blue">
+              <div className="p-6">
+                <h3 className="font-semibold mb-4 flex items-center">
+                  <Coffee className="mr-2 text-universe-neonBlue" />
+                  Cafe Menu
+                </h3>
+                
+                <div className="space-y-3">
+                  {campusInfo.menu.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <span>{item.item}</span>
+                      <span className="font-semibold">₹{item.price}</span>
+                    </div>
+                  ))}
                 </div>
-              </GlowingCard>
-            </div>
-          )}
-          
-          {campusInfoTab === "stationery" && (
-            <div>
-              <div className="flex items-center mb-4">
-                <ShoppingCart className="text-universe-neonBlue mr-2" />
-                <h3 className="text-lg font-semibold">Stationery Stock Availability</h3>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {campusInfo.stationeryStock.map((item, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, delay: index * 0.05 }}
-                  >
-                    <GlowingCard gradient="blue" className="hover:shadow-neon">
-                      <div className="p-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="font-medium">{item.item}</span>
-                          <span className={cn(
-                            "px-2 py-0.5 text-xs rounded-full",
-                            item.available > 20 
-                              ? "bg-green-500 bg-opacity-20 text-green-400" 
-                              : item.available > 5 
-                              ? "bg-yellow-500 bg-opacity-20 text-yellow-400" 
-                              : "bg-red-500 bg-opacity-20 text-red-400"
-                          )}>
-                            {item.available > 20 
-                              ? "In Stock" 
-                              : item.available > 5 
-                              ? "Limited" 
-                              : "Low Stock"}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm text-gray-400">
-                          <span>Available:</span>
-                          <span>{item.available} units</span>
-                        </div>
+            </GlowingCard>
+            
+            <GlowingCard gradient="green">
+              <div className="p-6">
+                <h3 className="font-semibold mb-4 flex items-center">
+                  <Store className="mr-2 text-universe-neonGreen" />
+                  Shop Hours
+                </h3>
+                
+                <div className="space-y-3">
+                  {campusInfo.shopHours.map((shop, index) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <span>{shop.name}</span>
+                      <div className="flex items-center text-gray-400">
+                        <Clock className="w-3 h-3 mr-1" />
+                        <span>{shop.hours}</span>
                       </div>
-                    </GlowingCard>
-                  </motion.div>
-                ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </GlowingCard>
+            
+            <GlowingCard gradient="purple">
+              <div className="p-6">
+                <h3 className="font-semibold mb-4 flex items-center">
+                  <PenLine className="mr-2 text-universe-neonPurple" />
+                  Stationery Stock
+                </h3>
+                
+                <div className="space-y-3">
+                  {campusInfo.stationeryStock.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <span>{item.item}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "text-xs px-2 py-0.5 rounded-full",
+                          item.available > 20
+                            ? "bg-green-500 bg-opacity-20 text-green-400"
+                            : item.available > 10
+                            ? "bg-yellow-500 bg-opacity-20 text-yellow-400"
+                            : "bg-red-500 bg-opacity-20 text-red-400"
+                        )}>
+                          {item.available > 20 
+                            ? "In stock" 
+                            : item.available > 10 
+                            ? "Limited" 
+                            : "Low stock"}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-full text-gray-400 hover:text-white hover:bg-universe-card"
+                        >
+                          <ShoppingCart className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </GlowingCard>
+          </div>
+          
+          <GlowingCard gradient="blue-green">
+            <div className="p-6">
+              <h3 className="font-semibold mb-4 flex items-center">
+                <Grid3X3 className="mr-2 text-universe-neonBlue" />
+                Campus Map
+              </h3>
+              
+              <div className="aspect-video bg-universe-dark rounded-lg flex items-center justify-center">
+                <p className="text-gray-400">Interactive campus map coming soon</p>
               </div>
             </div>
-          )}
+          </GlowingCard>
         </TabsContent>
       </Tabs>
     </div>

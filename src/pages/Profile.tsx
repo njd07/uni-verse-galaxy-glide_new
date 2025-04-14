@@ -1,13 +1,15 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useUniverse } from "@/contexts/UniverseContext";
+import { useAuth } from "@/contexts/AuthContext";
 import GradientText from "@/components/ui/GradientText";
 import GlowingCard from "@/components/ui/GlowingCard";
 import GradientButton from "@/components/ui/GradientButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import {
   DialogContent,
   DialogDescription,
@@ -19,9 +21,12 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, Settings, Calendar, CheckSquare, GraduationCap, Book, Heart } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 const Profile = () => {
   const { currentUser, updateUser, assignments, events } = useUniverse();
+  const { user } = useAuth();
+  const { toast } = useToast();
   
   const [editedUser, setEditedUser] = useState({
     name: currentUser.name,
@@ -29,16 +34,81 @@ const Profile = () => {
     email: currentUser.email
   });
   
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Get Supabase profile when component mounts
+  useEffect(() => {
+    const getProfile = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data) {
+          // Update the universe context with the profile data
+          updateUser({
+            id: user.id,
+            name: data.full_name || data.username || user.email?.split('@')[0] || 'User',
+            studentId: data.student_id || `ST${user.id.substring(0, 5).toUpperCase()}`,
+            email: user.email || '',
+            profilePicture: data.avatar_url || user.user_metadata?.avatar_url || `https://i.pravatar.cc/300?u=${user.id}`
+          });
+        }
+      } catch (error) {
+        console.error("Error loading profile:", error);
+      }
+    };
+    
+    getProfile();
+  }, [user, updateUser]);
+  
   const completedAssignments = assignments.filter(a => a.completed).length;
   const pendingAssignments = assignments.filter(a => !a.completed).length;
   const upcomingEvents = events.filter(e => e.date > new Date()).length;
   
-  const handleUpdateProfile = () => {
-    updateUser({
-      name: editedUser.name,
-      studentId: editedUser.studentId,
-      email: editedUser.email
-    });
+  const handleUpdateProfile = async () => {
+    if (!user) return;
+    setIsLoading(true);
+    
+    try {
+      // Update in Supabase profiles
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: editedUser.name,
+          student_id: editedUser.studentId
+        })
+        .eq('id', user.id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      updateUser({
+        name: editedUser.name,
+        studentId: editedUser.studentId,
+        email: editedUser.email
+      });
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully",
+      });
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast({
+        title: "Update failed",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   return (
@@ -146,9 +216,10 @@ const Profile = () => {
                         type="email"
                         placeholder="Your email"
                         value={editedUser.email}
-                        onChange={(e) => setEditedUser({ ...editedUser, email: e.target.value })}
-                        className="bg-universe-dark border-universe-card"
+                        disabled
+                        className="bg-universe-dark border-universe-card opacity-70"
                       />
+                      <p className="text-xs text-gray-400">Email cannot be changed</p>
                     </div>
                   </div>
                   
@@ -156,8 +227,9 @@ const Profile = () => {
                     <GradientButton
                       gradient="blue-purple"
                       onClick={handleUpdateProfile}
+                      disabled={isLoading}
                     >
-                      Save Changes
+                      {isLoading ? "Saving..." : "Save Changes"}
                     </GradientButton>
                   </DialogFooter>
                 </DialogContent>

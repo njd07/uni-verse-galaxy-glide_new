@@ -1,7 +1,9 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase, testSupabaseConnection } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
+import { useUniverse } from '@/contexts/UniverseContext';
 
 type AuthContextType = {
   user: User | null;
@@ -20,6 +22,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { updateUser } = useUniverse();
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -35,6 +38,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log("Got session:", session ? "Session exists" : "No session");
           setSession(session);
           setUser(session?.user ?? null);
+          
+          // Update Universe context with user info
+          if (session?.user) {
+            updateUserInformation(session.user);
+          }
         }
       } catch (error: any) {
         console.error("Error initializing auth:", error.message);
@@ -43,11 +51,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
+    // Update Universe context with user info
+    const updateUserInformation = (user: User) => {
+      const username = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
+      const id = user.id;
+      const email = user.email || '';
+      
+      updateUser({
+        id: id,
+        name: username,
+        studentId: `ST${id.substring(0, 5).toUpperCase()}`,
+        email: email,
+        profilePicture: user.user_metadata?.avatar_url || `https://i.pravatar.cc/300?u=${id}`
+      });
+    };
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       console.log("Auth state changed:", event);
       setSession(newSession);
       setUser(newSession?.user ?? null);
+      
+      // Update Universe context with user info when session changes
+      if (newSession?.user) {
+        updateUserInformation(newSession.user);
+      }
+      
       setLoading(false);
     });
 
@@ -57,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [updateUser]);
 
   const testConnection = async () => {
     console.log("Testing Supabase connection...");
@@ -118,7 +147,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email, 
         password,
         options: {
-          data: { username },
+          data: { 
+            name: username,
+            avatar_url: `https://i.pravatar.cc/300?u=${Math.random()}`
+          },
           emailRedirectTo: window.location.origin
         }
       });
