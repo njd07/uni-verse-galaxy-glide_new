@@ -24,15 +24,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const initializeAuth = async () => {
+      setLoading(true);
       try {
-        // Test connection first
-        await testSupabaseConnection();
+        console.log("Initializing auth with Supabase URL:", supabase.supabaseUrl);
         
         // Get initial session
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error("Session retrieval error:", error.message);
         } else {
+          console.log("Got session:", session ? "Session exists" : "No session");
           setSession(session);
           setUser(session?.user ?? null);
         }
@@ -43,9 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    initializeAuth();
-
-    // Subscribe to auth changes
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       console.log("Auth state changed:", event);
       setSession(newSession);
@@ -53,13 +52,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     });
 
+    // Initialize auth after setting up the listener
+    initializeAuth();
+
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
   const testConnection = async () => {
-    return await testSupabaseConnection();
+    console.log("Testing Supabase connection...");
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      console.log("Test connection result:", data, error);
+      return { success: !error, error };
+    } catch (error) {
+      console.error("Supabase connection test error:", error);
+      return { success: false, error };
+    }
   };
 
   const signIn = async (email: string, password: string) => {
@@ -80,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } catch (error: any) {
       console.error("Sign in error details:", error);
-      let errorMsg = "Failed to sign in. Please check your internet connection and try again.";
+      let errorMsg = "Failed to sign in. Please check your credentials and try again.";
       if (error.message) {
         errorMsg = error.message;
       } else if (error.error_description) {
@@ -104,12 +114,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log("Attempting to sign up with:", email, "and username:", username);
       
-      // Test connection before sign up
-      const connectionTest = await testSupabaseConnection();
-      if (!connectionTest.success) {
-        throw new Error("Cannot connect to Supabase. Please check your internet connection.");
-      }
-      
       // Create the user
       const { error: signUpError, data } = await supabase.auth.signUp({ 
         email, 
@@ -132,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } catch (error: any) {
       console.error("Sign up error details:", error);
-      let errorMsg = "Failed to create account. Please check your internet connection and try again.";
+      let errorMsg = "Failed to create account. Please try again.";
       
       if (error.message) {
         errorMsg = error.message;

@@ -48,19 +48,33 @@ const Signup = () => {
   useEffect(() => {
     const checkConnection = async () => {
       try {
+        console.log("Signup page - checking connection to Supabase");
         const result = await testConnection();
+        console.log("Connection test result:", result);
         setConnectionStatus(result.success ? 'success' : 'error');
         if (!result.success) {
           setErrorMessage("Cannot connect to authentication service. Please check your internet connection.");
+        } else {
+          setErrorMessage(null);
         }
       } catch (error) {
+        console.error("Connection check error:", error);
         setConnectionStatus('error');
         setErrorMessage("Failed to check connection to authentication service.");
       }
     };
 
     checkConnection();
-  }, [testConnection]);
+    
+    // Try reconnecting every 5 seconds if there's an error
+    const intervalId = setInterval(() => {
+      if (connectionStatus === 'error') {
+        checkConnection();
+      }
+    }, 5000);
+    
+    return () => clearInterval(intervalId);
+  }, [testConnection, connectionStatus]);
 
   const onSubmit = async (values: SignupFormValues) => {
     if (connectionStatus === 'error') {
@@ -108,7 +122,7 @@ const Signup = () => {
               </Alert>
             )}
             
-            {errorMessage && (
+            {errorMessage && connectionStatus !== 'error' && (
               <Alert variant="destructive" className="mb-4">
                 <AlertDescription>{errorMessage}</AlertDescription>
               </Alert>
@@ -126,7 +140,7 @@ const Signup = () => {
                         <Input
                           id="username"
                           placeholder="Choose a username"
-                          disabled={isLoading}
+                          disabled={isLoading || connectionStatus === 'checking'}
                           className="bg-universe-dark border-universe-card"
                           {...field}
                         />
@@ -147,7 +161,7 @@ const Signup = () => {
                           id="email"
                           type="email"
                           placeholder="your.email@example.com"
-                          disabled={isLoading}
+                          disabled={isLoading || connectionStatus === 'checking'}
                           className="bg-universe-dark border-universe-card"
                           {...field}
                         />
@@ -168,7 +182,7 @@ const Signup = () => {
                           id="password"
                           type="password"
                           placeholder="Create a password"
-                          disabled={isLoading}
+                          disabled={isLoading || connectionStatus === 'checking'}
                           className="bg-universe-dark border-universe-card"
                           {...field}
                         />
@@ -181,7 +195,7 @@ const Signup = () => {
                 <Button
                   type="submit"
                   className="w-full bg-universe-neonPurple hover:bg-universe-neonPurple/80"
-                  disabled={isLoading || connectionStatus === 'checking'}
+                  disabled={isLoading || connectionStatus !== 'success'}
                 >
                   {isLoading ? (
                     <>
@@ -193,6 +207,8 @@ const Signup = () => {
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Checking connection...
                     </>
+                  ) : connectionStatus === 'error' ? (
+                    "Sign Up"
                   ) : (
                     "Sign Up"
                   )}
