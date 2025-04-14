@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -91,7 +92,7 @@ const KnowledgeNebula = () => {
   return (
     <div className="space-y-8">
       <header className="mb-8">
-        <GradientText gradient="blue-green" element="h1" className="text-3xl md:text-4xl font-bold mb-2">
+        <GradientText gradient="blue-purple" element="h1" className="text-3xl md:text-4xl font-bold mb-2">
           Knowledge Nebula
         </GradientText>
         <p className="text-gray-400">Access study materials and campus information</p>
@@ -310,7 +311,7 @@ const KnowledgeNebula = () => {
               </div>
             </GlowingCard>
             
-            <GlowingCard gradient="green" className="p-6">
+            <GlowingCard gradient="purple" className="p-6">
               <div className="p-6">
                 <h3 className="font-semibold mb-4 flex items-center">
                   <Store className="mr-2 text-universe-neonGreen" />
@@ -372,7 +373,7 @@ const KnowledgeNebula = () => {
             </GlowingCard>
           </div>
           
-          <GlowingCard gradient="blue-green" className="p-6">
+          <GlowingCard gradient="blue-purple" className="p-6">
             <div className="p-6">
               <h3 className="font-semibold mb-4 flex items-center">
                 <Grid3X3 className="mr-2 text-universe-neonBlue" />
