@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useUniverse } from "@/contexts/UniverseContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import GradientText from "@/components/ui/GradientText";
 import GlowingCard from "@/components/ui/GlowingCard";
@@ -20,7 +21,7 @@ import {
   Dialog,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, MessageSquare, UserPlus, Check, X, Mail, Send } from "lucide-react";
+import { Search, MessageSquare, UserPlus, Check, X, Mail, Send, Clock, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
@@ -30,15 +31,20 @@ const Friends = () => {
     addFriend, 
     updateFriendStatus, 
     setSelectedChat,
-    currentUser 
+    currentUser,
+    resources
   } = useUniverse();
   
+  const { user } = useAuth();
   const { toast } = useToast();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [friendEmail, setFriendEmail] = useState("");
   const [chatMessage, setChatMessage] = useState("");
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [chats, setChats] = useState<any[]>([]);
+  
+  const [friendResources, setFriendResources] = useState<any[]>([]);
   
   const pendingFriends = friends.filter(friend => friend.status === "pending");
   const acceptedFriends = friends.filter(friend => friend.status === "accepted");
@@ -51,20 +57,26 @@ const Friends = () => {
     ? chats.find(chat => chat.participants && chat.participants.includes(activeChatId))
     : null;
   
+  // Load friend resources when a friend is selected
+  useEffect(() => {
+    if (activeChatId) {
+      // In a real app, this would fetch resources from the selected friend
+      // For now, just show some sample resources from our own resources
+      const friendResourcesSimulation = resources.slice(0, 2).map(resource => ({
+        ...resource,
+        ownerId: activeChatId
+      }));
+      setFriendResources(friendResourcesSimulation);
+    } else {
+      setFriendResources([]);
+    }
+  }, [activeChatId, resources]);
+  
   const handleSendFriendRequest = async () => {
     if (!friendEmail.trim()) return;
     
-    // Check if Supabase is configured before trying to use it
-    if (isSupabaseConfigured()) {
-      try {
-        // Here you would add the actual Supabase call to send a friend request
-        // For now, we'll just use the mock function
-        console.log("Sending friend request via Supabase to:", friendEmail);
-      } catch (error) {
-        console.error("Error sending friend request:", error);
-      }
-    }
-    
+    // In a real app with Supabase, you would check if the user exists
+    // For now we'll simulate adding a friend
     addFriend({
       name: `New Friend (${friendEmail})`,
       status: "pending",
@@ -86,6 +98,16 @@ const Friends = () => {
       title: "Friend request accepted",
       description: "You are now friends!",
     });
+    
+    // In a real app, this would create a chat channel between the users
+    const friend = friends.find(f => f.id === id);
+    if (friend) {
+      setChats(prevChats => [...prevChats, {
+        id: `chat-${Date.now()}`,
+        participants: [currentUser.id, id],
+        messages: []
+      }]);
+    }
   };
   
   const handleDeclineFriendRequest = (id: string) => {
@@ -156,6 +178,133 @@ const Friends = () => {
       description: "Your message has been sent successfully",
     });
   };
+  
+  // Updated chat dialog with added resources section
+  const chatDialogContent = (
+    <DialogContent className="bg-universe-card border-universe-neonBlue max-w-md w-full">
+      <DialogHeader>
+        <DialogTitle className="flex items-center">
+          <Avatar className="w-8 h-8 mr-2">
+            <AvatarImage 
+              src={activeChatId ? friends.find(f => f.id === activeChatId)?.profilePicture : undefined} 
+              alt="Friend" 
+            />
+            <AvatarFallback className="bg-universe-neonPurple text-white">
+              {activeChatId ? friends.find(f => f.id === activeChatId)?.name.charAt(0) : "?"}
+            </AvatarFallback>
+          </Avatar>
+          <span>
+            {activeChatId ? 
+              friends.find(f => f.id === activeChatId)?.name || "Chat" 
+              : "New Chat"
+            }
+          </span>
+        </DialogTitle>
+      </DialogHeader>
+      
+      <Tabs defaultValue="messages">
+        <TabsList className="w-full mb-4">
+          <TabsTrigger value="messages" className="flex-1">Messages</TabsTrigger>
+          <TabsTrigger value="resources" className="flex-1">Resources</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="messages">
+          <div className="h-[300px] overflow-y-auto border border-universe-card rounded-md mb-4 p-4 bg-universe-dark">
+            {activeChat?.messages?.length ? (
+              <div className="space-y-3">
+                {activeChat.messages.map((message, index) => (
+                  <div 
+                    key={index}
+                    className={cn(
+                      "max-w-[80%] rounded-lg p-3",
+                      message.senderId === currentUser.id
+                        ? "bg-universe-neonPurple bg-opacity-20 ml-auto"
+                        : "bg-universe-card"
+                    )}
+                  >
+                    <p className="text-sm">{message.content}</p>
+                    <p className="text-right text-xs text-gray-400">
+                      {format(new Date(message.timestamp), "h:mm a")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                <p>No messages yet. Start the conversation!</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex space-x-2">
+            <Input
+              placeholder="Type a message..."
+              value={chatMessage}
+              onChange={(e) => setChatMessage(e.target.value)}
+              className="flex-1 bg-universe-dark border-universe-card"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+            />
+            <Button
+              onClick={handleSendMessage}
+              disabled={!chatMessage.trim()}
+              className="bg-universe-neonBlue hover:bg-universe-neonBlue/80"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="resources">
+          <div className="h-[346px] overflow-y-auto border border-universe-card rounded-md p-4 bg-universe-dark">
+            {friendResources.length > 0 ? (
+              <div className="space-y-3">
+                {friendResources.map((resource, index) => (
+                  <div key={index} className="bg-universe-card p-3 rounded-lg">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-semibold">{resource.title}</h4>
+                        <p className="text-sm text-gray-400 mt-1">{resource.course}</p>
+                      </div>
+                      <span className={cn(
+                        "text-xs px-2 py-0.5 rounded-full",
+                        resource.type === "PDF" 
+                          ? "bg-blue-500 bg-opacity-30 text-blue-300" 
+                          : "bg-yellow-500 bg-opacity-30 text-yellow-300"
+                      )}>
+                        {resource.type}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mt-2">
+                      <div className="flex items-center text-xs text-gray-400">
+                        <Clock className="w-3 h-3 mr-1" />
+                        <span>{format(new Date(resource.uploadDate), "MMM d, yyyy")}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="p-1 text-universe-neonBlue hover:text-white hover:bg-universe-neonBlue hover:bg-opacity-20"
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-400">
+                <p>No shared resources yet.</p>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+    </DialogContent>
+  );
   
   return (
     <div className="space-y-8">
@@ -365,72 +514,7 @@ const Friends = () => {
       {/* Chat Dialog */}
       <Dialog>
         <DialogTrigger id="chat-dialog-trigger" className="hidden" />
-        <DialogContent className="bg-universe-card border-universe-neonBlue max-w-md w-full">
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Avatar className="w-8 h-8 mr-2">
-                <AvatarFallback className="bg-universe-neonPurple text-white">
-                  {activeChatId ? friends.find(f => f.id === activeChatId)?.name.charAt(0) : "?"}
-                </AvatarFallback>
-              </Avatar>
-              <span>
-                {activeChatId ? 
-                  friends.find(f => f.id === activeChatId)?.name || "Chat" 
-                  : "New Chat"
-                }
-              </span>
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="h-[300px] overflow-y-auto border border-universe-card rounded-md mb-4 p-4 bg-universe-dark">
-            {activeChat?.messages?.length ? (
-              <div className="space-y-3">
-                {activeChat.messages.map((message, index) => (
-                  <div 
-                    key={index}
-                    className={cn(
-                      "max-w-[80%] rounded-lg p-3",
-                      message.senderId === currentUser.id
-                        ? "bg-universe-neonPurple bg-opacity-20 ml-auto"
-                        : "bg-universe-card"
-                    )}
-                  >
-                    <p className="text-sm">{message.content}</p>
-                    <p className="text-right text-xs text-gray-400">
-                      {format(message.timestamp, "h:mm a")}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="h-full flex items-center justify-center text-gray-400">
-                <p>No messages yet. Start the conversation!</p>
-              </div>
-            )}
-          </div>
-          
-          <div className="flex space-x-2">
-            <Input
-              placeholder="Type a message..."
-              value={chatMessage}
-              onChange={(e) => setChatMessage(e.target.value)}
-              className="flex-1 bg-universe-dark border-universe-card"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-            />
-            <Button
-              onClick={handleSendMessage}
-              disabled={!chatMessage.trim()}
-              className="bg-universe-neonBlue hover:bg-universe-neonBlue/80"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-        </DialogContent>
+        {chatDialogContent}
       </Dialog>
     </div>
   );

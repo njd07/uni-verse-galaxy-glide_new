@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useUniverse } from "@/contexts/UniverseContext";
@@ -38,9 +37,13 @@ import {
   ShoppingCart 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/toast";
 
 const KnowledgeNebula = () => {
   const { resources, addResource, campusInfo } = useUniverse();
+  const { toast } = useToast();
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [resourceTypeFilter, setResourceTypeFilter] = useState<string | null>(null);
@@ -51,44 +54,158 @@ const KnowledgeNebula = () => {
     title: "",
     course: "",
     type: "PDF",
-    url: "#"
+    url: "#",
+    file: null as File | null
   });
   
-  // Extract unique courses for filter
   const uniqueCourses = Array.from(new Set(resources.map(resource => resource.course)));
   
-  // Filter resources
   const filteredResources = resources.filter(resource => {
-    // Apply search term filter
     const matchesSearchTerm = searchTerm === "" || 
       resource.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       resource.course.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Apply resource type filter
     const matchesType = resourceTypeFilter === null || resource.type === resourceTypeFilter;
     
-    // Apply course filter
     const matchesCourse = courseFilter === null || resource.course === courseFilter;
     
     return matchesSearchTerm && matchesType && matchesCourse;
   });
   
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    if (file) {
+      console.log("File selected:", file.name);
+      setNewResource({ ...newResource, file });
+      
+      if (file.name.toLowerCase().endsWith('.pdf')) {
+        setNewResource(prev => ({ ...prev, file, type: "PDF" }));
+      } else {
+        setNewResource(prev => ({ ...prev, file }));
+      }
+    }
+  };
+  
   const handleAddResource = () => {
+    if (!newResource.title || !newResource.course) {
+      toast({
+        title: "Missing information",
+        description: "Please provide a title and course for the resource",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const resourceUrl = newResource.file 
+      ? URL.createObjectURL(newResource.file) 
+      : "#";
+    
     addResource({
       title: newResource.title,
       course: newResource.course,
       uploadDate: new Date(),
       type: newResource.type as "PDF" | "PYQ",
-      url: newResource.url
+      url: resourceUrl
+    });
+    
+    toast({
+      title: "Resource Added",
+      description: `${newResource.title} has been added successfully`,
     });
     
     setNewResource({
       title: "",
       course: "",
       type: "PDF",
-      url: "#"
+      url: "#",
+      file: null
     });
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
+  
+  const resourceDialogContent = (
+    <DialogContent className="bg-universe-card border-universe-neonBlue">
+      <DialogHeader>
+        <DialogTitle>Upload Resource</DialogTitle>
+        <DialogDescription>
+          Share study materials with your classmates
+        </DialogDescription>
+      </DialogHeader>
+      
+      <div className="space-y-4 py-4">
+        <div className="space-y-2">
+          <Label htmlFor="resource-title">Title</Label>
+          <Input
+            id="resource-title"
+            placeholder="Enter resource title"
+            value={newResource.title}
+            onChange={(e) => setNewResource({ ...newResource, title: e.target.value })}
+            className="bg-universe-dark border-universe-card"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="resource-course">Course</Label>
+          <Input
+            id="resource-course"
+            placeholder="Enter course name"
+            value={newResource.course}
+            onChange={(e) => setNewResource({ ...newResource, course: e.target.value })}
+            className="bg-universe-dark border-universe-card"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="resource-type">Resource Type</Label>
+          <Select 
+            value={newResource.type}
+            onValueChange={(value) => setNewResource({ ...newResource, type: value })}
+          >
+            <SelectTrigger className="bg-universe-dark border-universe-card">
+              <SelectValue placeholder="Select resource type" />
+            </SelectTrigger>
+            <SelectContent className="bg-universe-card border-universe-card">
+              <SelectItem value="PDF">PDF</SelectItem>
+              <SelectItem value="PYQ">PYQ</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div 
+          className="bg-universe-dark border border-dashed border-universe-card rounded-lg p-6 text-center cursor-pointer"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <input 
+            type="file" 
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden" 
+            accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
+          />
+          <BookOpen className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+          <p className="text-sm text-gray-400">
+            {newResource.file ? `Selected: ${newResource.file.name}` : 'Drop your file here or click to browse'}
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            Supports PDF, DOC, PPT (Max 10MB)
+          </p>
+        </div>
+      </div>
+      
+      <DialogFooter>
+        <GradientButton
+          gradient="blue"
+          onClick={handleAddResource}
+          disabled={!newResource.title || !newResource.course}
+        >
+          Upload Resource
+        </GradientButton>
+      </DialogFooter>
+    </DialogContent>
+  );
   
   return (
     <div className="space-y-8">
@@ -169,74 +286,7 @@ const KnowledgeNebula = () => {
                     Upload Resource
                   </GradientButton>
                 </DialogTrigger>
-                <DialogContent className="bg-universe-card border-universe-neonBlue">
-                  <DialogHeader>
-                    <DialogTitle>Upload Resource</DialogTitle>
-                    <DialogDescription>
-                      Share study materials with your classmates
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="resource-title">Title</Label>
-                      <Input
-                        id="resource-title"
-                        placeholder="Enter resource title"
-                        value={newResource.title}
-                        onChange={(e) => setNewResource({ ...newResource, title: e.target.value })}
-                        className="bg-universe-dark border-universe-card"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="resource-course">Course</Label>
-                      <Input
-                        id="resource-course"
-                        placeholder="Enter course name"
-                        value={newResource.course}
-                        onChange={(e) => setNewResource({ ...newResource, course: e.target.value })}
-                        className="bg-universe-dark border-universe-card"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="resource-type">Resource Type</Label>
-                      <Select 
-                        value={newResource.type}
-                        onValueChange={(value) => setNewResource({ ...newResource, type: value })}
-                      >
-                        <SelectTrigger className="bg-universe-dark border-universe-card">
-                          <SelectValue placeholder="Select resource type" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-universe-card border-universe-card">
-                          <SelectItem value="PDF">PDF</SelectItem>
-                          <SelectItem value="PYQ">PYQ</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="bg-universe-dark border border-dashed border-universe-card rounded-lg p-6 text-center">
-                      <BookOpen className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-400">
-                        Drop your file here or click to browse
-                      </p>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Supports PDF, DOC, PPT (Max 10MB)
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <DialogFooter>
-                    <GradientButton
-                      gradient="blue"
-                      onClick={handleAddResource}
-                      disabled={!newResource.title || !newResource.course}
-                    >
-                      Upload Resource
-                    </GradientButton>
-                  </DialogFooter>
-                </DialogContent>
+                {resourceDialogContent}
               </Dialog>
             </div>
           </div>

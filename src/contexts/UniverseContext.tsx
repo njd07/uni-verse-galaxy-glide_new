@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 // Types
@@ -655,6 +654,10 @@ export const UniverseProvider: React.FC<{ children: ReactNode }> = ({ children }
         relatedId: newEvent.id
       });
     }
+    
+    // Log the event for debugging
+    console.log("Added new event:", newEvent);
+    console.log("Current events:", [...events, newEvent]);
   };
   
   const updateEvent = (id: string, event: Partial<Event>) => {
@@ -696,15 +699,26 @@ export const UniverseProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
   
   const updateAssignment = (id: string, assignment: Partial<Assignment>) => {
-    setAssignments(prev => prev.map(a => a.id === id ? { ...a, ...assignment } : a));
-    
-    // If completed, update user stats
-    if (assignment.completed) {
-      setCurrentUser(prev => ({
-        ...prev,
-        assignmentsCompleted: prev.assignmentsCompleted + 1
-      }));
-    }
+    setAssignments(prev => prev.map(a => {
+      if (a.id === id) {
+        // Create the updated assignment
+        const updatedAssignment = { ...a, ...assignment };
+        console.log("Updated assignment:", updatedAssignment);
+        
+        // If it's being marked as completed and wasn't completed before
+        if (assignment.completed === true && a.completed === false) {
+          // Update user stats
+          setCurrentUser(prev => ({
+            ...prev,
+            assignmentsCompleted: prev.assignmentsCompleted + 1
+          }));
+          console.log("Incremented completed assignments count");
+        }
+        
+        return updatedAssignment;
+      }
+      return a;
+    }));
   };
   
   const deleteAssignment = (id: string) => {
@@ -732,10 +746,42 @@ export const UniverseProvider: React.FC<{ children: ReactNode }> = ({ children }
   const addFriend = (friend: Omit<Friend, "id">) => {
     const newFriend = { ...friend, id: `user${friends.length + 10}` };
     setFriends(prev => [...prev, newFriend]);
+    console.log("Friend request sent:", newFriend);
+    
+    // Add notification for the recipient (in a real app, this would be sent to the other user)
+    addNotification({
+      title: "New Friend Request",
+      message: `${currentUser.name} sent you a friend request`,
+      date: new Date(),
+      isRead: false,
+      type: "friend",
+      relatedId: newFriend.id
+    });
   };
   
   const updateFriendStatus = (id: string, status: Friend["status"]) => {
-    setFriends(prev => prev.map(f => f.id === id ? { ...f, status } : f));
+    setFriends(prev => prev.map(f => {
+      if (f.id === id) {
+        console.log(`Updated friend ${id} status to ${status}`);
+        return { ...f, status };
+      }
+      return f;
+    }));
+    
+    // If accepting a friend request, add a notification
+    if (status === "accepted") {
+      const friend = friends.find(f => f.id === id);
+      if (friend) {
+        addNotification({
+          title: "Friend Request Accepted",
+          message: `You and ${friend.name} are now friends`,
+          date: new Date(),
+          isRead: false,
+          type: "friend",
+          relatedId: friend.id
+        });
+      }
+    }
   };
   
   const addMessage = (message: Omit<ChatMessage, "id">) => {
@@ -828,6 +874,7 @@ export const UniverseProvider: React.FC<{ children: ReactNode }> = ({ children }
   const addResource = (resource: Omit<Resource, "id">) => {
     const newResource = { ...resource, id: `resource${resources.length + 1}` };
     setResources(prev => [...prev, newResource]);
+    console.log("Added new resource:", newResource);
   };
   
   const updateCampusInfo = (info: Partial<CampusInfo>) => {
