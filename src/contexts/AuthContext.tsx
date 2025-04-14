@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, testSupabaseConnection } from '@/lib/supabase';
@@ -26,7 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initializeAuth = async () => {
       setLoading(true);
       try {
-        console.log("Initializing auth with Supabase URL:", supabase.supabaseUrl);
+        console.log("Initializing auth with Supabase");
         
         // Get initial session
         const { data: { session }, error } = await supabase.auth.getSession();
